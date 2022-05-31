@@ -1,50 +1,71 @@
 #!/usr/bin/env python3
 
+import argparse
 from struct import pack
 import numpy as np
 import cv2 as cv
 import mediapipe as mp
 
 if __name__ == "__main__":
-    mp_face_mesh = mp.solutions.face_mesh
-    
-    # Compute the mesh points.  One mesh per frame.
-    meshes = []
+    arg_parser = argparse.ArgumentParser(description=
+        """
+        Processes video of a human face into 3D face mesh animation
+        data.  Currently only supports video files with a single face.
+        """
+    )
+    arg_parser.add_argument("input_video", help="The input video file with a person's face in it.")
+    arg_parser.add_argument("output_mdd", help="The .mdd file to write the mesh animation data to.")
+    args = arg_parser.parse_args()
+
+    video_path = args.input_video
+    mdd_path = args.output_mdd
+
+    # Compute the mesh points from the input video.
+    meshes = []  # One mesh per frame.
     point_count = 0
+    width = 0
+    height = 0
+    fps = 0
     aspect_ratio = 1.0
-    with mp_face_mesh.FaceMesh(
+    with mp.solutions.face_mesh.FaceMesh(
         static_image_mode=False, # Set false for video.
         max_num_faces=1,
         refine_landmarks=True,
-        min_detection_confidence=0.5) as face_mesh:    
+        min_detection_confidence=0.5) as face_mesh:
+
+        video = cv.VideoCapture(video_path)
+
+        width = video.get(cv.CAP_PROP_FRAME_WIDTH)
+        height = video.get(cv.CAP_PROP_FRAME_HEIGHT)
+        fps = video.get(cv.CAP_PROP_FPS)
+        aspect_ratio = width / height
+        print("Input video fps: {}".format(fps))
+        print("Input video resolution: {}x{}".format(int(width), int(height)))
 
         i = 1
-        cap = cv.VideoCapture("videos/BDGFACE 5_12.mp4")
-        while cap.isOpened():
+        while video.isOpened():
+            ret, image = video.read()
             print("\rReading frame", i, end = "")
-            ret, image = cap.read()
             if not ret:
                 break
 
-            aspect_ratio = image.shape[1] / image.shape[0]
-            results = face_mesh.process(cv.cvtColor(image, cv.COLOR_BGR2RGB))    
+            results = face_mesh.process(cv.cvtColor(image, cv.COLOR_BGR2RGB))
             if not results.multi_face_landmarks:
                 meshes += [None]
             else:
                 point_count = len(results.multi_face_landmarks[0].landmark)
                 meshes += [results.multi_face_landmarks[0].landmark]
-            
+
             i += 1
-        cap.release()
+        video.release()
     print("\rRead {} frames.                 ".format(len(meshes)))
-    
+    print("Generated vert count:", point_count)
+
     # Write the mdd file.
-    fps = 24.0  # TODO: get this from the video file.
     frame_count = len(meshes)
     if frame_count > 0:
-        with open("test.mdd", 'wb') as mdd:
-            print("Vert count:", point_count)
-        
+        with open(mdd_path, 'wb') as mdd:
+
             mdd.write(pack(">2i", frame_count, point_count))
             mdd.write(pack(">%df" % (frame_count), *[frame / fps for frame in range(frame_count)]))
 
@@ -59,5 +80,5 @@ if __name__ == "__main__":
                     for point in mesh:
                         mdd.write(pack(">3f", point.x, point.y / aspect_ratio, point.z))
                 i += 1
-    print()
-            
+
+    print("\rWrote {} frames.                 ".format(len(meshes)))
