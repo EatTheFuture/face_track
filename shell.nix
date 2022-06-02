@@ -14,13 +14,7 @@ in pkgs.stdenv.mkDerivation {
     ];
 
     shellHook = with pkgs; ''
-        export PYTHON_LIBRARY="${pypkgs.python.libPrefix}"
-        export PYTHON_LIBPATH="${pypkgs.python}/lib"
-        export PYTHON_INCLUDE_DIR="${pypkgs.python}/include/${pypkgs.python.libPrefix}"
-        export PYTHON_VERSION="${pypkgs.python.pythonVersion}"
-        export PYTHON_NUMPY_PATH="${pypkgs.numpy}/${pypkgs.python.sitePackages}"
-        export PYTHON_NUMPY_INCLUDE_DIRS="${pypkgs.numpy}/${pypkgs.python.sitePackages}/numpy/core/include"
         export PYTHONPATH="$PYTHONPATH:$HOME/.local/lib/python3.10/site-packages"
-        export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python      
+        export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
     '';
 }
