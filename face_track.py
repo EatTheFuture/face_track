@@ -78,7 +78,9 @@ if __name__ == "__main__":
                         mdd.write(pack(">3f", 0.0, 0.0, 0.0))
                 else:
                     for point in mesh:
-                        mdd.write(pack(">3f", point.x, point.y / aspect_ratio, point.z))
+                        x = point.x - 0.5
+                        y = point.y - 0.5
+                        mdd.write(pack(">3f", x, y / aspect_ratio, point.z))
                 i += 1
 
     print("\rWrote {} frames.                 ".format(len(meshes)))
